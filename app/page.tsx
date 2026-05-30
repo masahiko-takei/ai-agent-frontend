@@ -1,23 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import ChatMessage from "@/components/ChatMessage"
 import ChatInput from "@/components/ChatInput"
-
-type Message = {
-  text: string
-  role: "user" | "ai"
-}
+import { useChatStore } from "@/store/chatStore"
 
 export default function Home() {
   const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<Message[]>([])
+  const { messages, addMessage } = useChatStore()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   const handleSend = async () => {
     if (message.trim() === "") return
 
-    const userMessage: Message = { text: message, role: "user" }
-    setMessages(prev => [...prev, userMessage])
+    addMessage({ text: message, role: "user" })
     setMessage("")
 
     const response = await fetch("/api/chat", {
@@ -27,8 +27,7 @@ export default function Home() {
     })
 
     const data = await response.json()
-    const aiMessage: Message = { text: data.reply, role: "ai" }
-    setMessages(prev => [...prev, aiMessage])
+    addMessage({ text: data.reply, role: "ai" })
   }
 
   return (
@@ -39,10 +38,11 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-2xl bg-gray-800 rounded-lg p-6">
-        <div className="mb-4 space-y-2">
+        <div className="mb-4 space-y-2 max-h-96 overflow-y-auto">
           {messages.map((msg, index) => (
             <ChatMessage key={index} message={msg} />
           ))}
+          <div ref={messagesEndRef} />
         </div>
         <ChatInput
           message={message}
